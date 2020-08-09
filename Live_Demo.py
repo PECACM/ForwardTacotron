@@ -9,6 +9,8 @@ from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import pdftotext
 from time import time
+import numpy as np
+from pydub import AudioSegment
 
 # Checking if GPU available
 # import tensorflow as tf
@@ -26,19 +28,38 @@ filelocation = askopenfilename() # open the dialog GUI
 with open(filelocation, "rb") as f:  # open the file in reading (rb) mode and call it f
     pdf = pdftotext.PDF(f)  # store a text version of the pdf file f in pdf variable
 
-input_text = ''
-for text in pdf:
-    input_text += text
+# print(len(str(pdf).split()))
+num_words = 0
+initial = "Welcome to audio file of pdf by PEC ACM."
+wav = synthesize(initial, tts_model, voc_melgan, alpha=1)
 
-# Synthesize with melgan (alpha=1.0)
+pgno = 0
 s = time()
-wav = synthesize(input_text, tts_model, voc_melgan, alpha=1)
+for text in pdf:
+    pgno+=1
+    l = str(text).split()
+    c = 0
+    num_words+=len(l)
+    for i in range(0, len(l), 10):
+        temp = ''
+        for j in range(i, min(len(l), i+10)):
+            temp+=l[j]
+            temp+=' '
+        wav1 = synthesize(temp, tts_model, voc_melgan, alpha=1)
+        wav = np.append(wav, wav1)
+    print("Page no: ",pgno, "completed!!")
+
+
 write('sample.wav', hp.sample_rate, wav)
 e = time()
-print(f"Audio conversion at {len(input_text)//(e-s)} words per second")
-print('Audio conversion successful')
-print("File saved as sample.wav")
 
-song = AudioSegment.from_wav("sample.wav")
-play(song)
+# print(num_words, e, s)
+print(f"Audio conversion at {num_words//(e-s)} words per second")
+# print('Audio conversion successful')
+
+AudioSegment.from_wav("sample.wav").export("Generated-Audio.mp3", format="mp3")
+print("Audio file saved as Generated-Audio.mp3")
+
+# song = AudioSegment.from_wav("sample.wav")
+# play(song)
 
